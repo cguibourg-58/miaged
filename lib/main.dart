@@ -320,7 +320,7 @@ class _ClothListPageState extends State<ClothListPage> {
                       bottom: TabBar(
                         tabs: [
                           Tab(
-                            text: "Tout",
+                            text: "Tous",
                           ),
                           Tab(text: "Hauts"),
                           Tab(text: "Pantalons"),
