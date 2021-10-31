@@ -212,7 +212,7 @@ class _ClothListPageState extends State<ClothListPage> {
                 color: Colors.white,
                 child: Text(
                   c.title +
-                      '\nTaille - ' +
+                      '\nTaille : ' +
                       c.size +
                       '\n' +
                       c.price.toStringAsFixed(2) +
@@ -241,7 +241,7 @@ class _ClothListPageState extends State<ClothListPage> {
               color: Colors.white,
               child: Text(
                 c.title +
-                    '\nTaille - ' +
+                    '\nTaille : ' +
                     c.size +
                     '\n' +
                     c.price.toStringAsFixed(2) +
@@ -275,6 +275,34 @@ class _ClothListPageState extends State<ClothListPage> {
     );
   }
 
+  Widget buildShortedItem(String cat) {
+    List<Widget> cards = <Widget>[];
+    double i = 0;
+    _cloth.forEach((element) {
+      if (element.category == cat) {
+        cards.add(buildItemCard(element));
+        i++;
+        log(i.toString());
+      }
+      if (cat == "Hauts") {
+        if (element.category == "Chemises" || element.category == "T-Shirt") {
+          cards.add(buildItemCard(element));
+          i++;
+          log(i.toString());
+        }
+      }
+    });
+
+    return GridView.count(
+      primary: false,
+      padding: const EdgeInsets.all(20),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      crossAxisCount: 2,
+      children: cards,
+    );
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder(
         future: initClothList(),
@@ -288,23 +316,40 @@ class _ClothListPageState extends State<ClothListPage> {
             return DefaultTabController(
                 length: 4,
                 child: Scaffold(
-                  appBar: AppBar(
-                    bottom: TabBar(
-                      tabs: [
-                        Tab(
-                          text: "Tout",
-                        ),
-                        Tab(text: "Hauts"),
-                        Tab(text: "Pantalons"),
-                        Tab(text: "Chauss."),
-                      ],
+                    appBar: AppBar(
+                      bottom: TabBar(
+                        tabs: [
+                          Tab(
+                            text: "Tout",
+                          ),
+                          Tab(text: "Hauts"),
+                          Tab(text: "Pantalons"),
+                          Tab(text: "Chauss."),
+                        ],
+                      ),
+                      title: Text("MIAGED"),
+                      automaticallyImplyLeading: false,
                     ),
-                    title: Text("MIAGED"),
-                    automaticallyImplyLeading: false,
-                  ),
-                  body: clothList,
-                  bottomNavigationBar: buttonNavigation(0),
-                ));
+                    body: TabBarView(
+                      children: [
+                        Scaffold(
+                          body: clothList,
+                          bottomNavigationBar: buttonNavigation(0),
+                        ),
+                        Scaffold(
+                          body: buildShortedItem("Hauts"),
+                          bottomNavigationBar: buttonNavigation(0),
+                        ),
+                        Scaffold(
+                          body: buildShortedItem("Pantalons"),
+                          bottomNavigationBar: buttonNavigation(0),
+                        ),
+                        Scaffold(
+                          body: buildShortedItem("Chaussures"),
+                          bottomNavigationBar: buttonNavigation(0),
+                        )
+                      ],
+                    )));
           } else {
             Widget clothList;
             //initClothList();
@@ -421,6 +466,13 @@ class _ClothDetailsPageState extends State<ClothDetailsPage> {
               alignment: Alignment.topCenter,
               child: Text(
                 "Catégorie : " + selectedCloth.category,
+                style: TextStyle(height: 1.5, fontSize: 18),
+              ),
+            ),
+            Container(
+              alignment: Alignment.topCenter,
+              child: Text(
+                "Taille : " + selectedCloth.size,
                 style: TextStyle(height: 1.5, fontSize: 18),
               ),
             ),
