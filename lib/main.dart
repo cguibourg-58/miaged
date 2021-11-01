@@ -20,6 +20,7 @@ void main() {
 }
 
 Cloth selectedCloth = Cloth("", "", 0, "", "", "", false);
+String currentUsersUID = "";
 
 void selectCloth(Cloth c) {
   selectedCloth = c;
@@ -39,8 +40,16 @@ void goToClothDetailedPage(BuildContext c) {
   );
 }
 
+void goToShoppingCartPage(BuildContext c) {
+  Navigator.push(
+    c,
+    MaterialPageRoute(builder: (context) => ShoppingCartPage()),
+  );
+}
+
 FirebaseFirestore firestoreInstance = FirebaseFirestore.instance;
 List _cloth = <Cloth>[];
+List _cartCloth = <Cloth>[];
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -134,6 +143,10 @@ class _LoginPageState extends State<LoginPage> {
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(
               email: _textLogin.text, password: _textPassword.text);
+      final User? user = FirebaseAuth.instance.currentUser;
+      final uid = user!.uid;
+      currentUsersUID = uid.toString();
+      log("uid: " + currentUsersUID);
       loggedIn = true;
       _cloth.clear();
       goToClothListPage(context);
@@ -146,32 +159,40 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+void addItemToCart(Cloth c) {
+  FirebaseFirestore.instance
+      .collection("users/" + currentUsersUID + "/cart")
+      .add({
+    'title': c.title,
+    'size': c.size,
+    'price': c.price,
+    'imageSrc': c.imageSrc,
+    'category': c.category,
+    'brand': c.brand,
+    'resizeImage': c.resize
+  });
+}
+
 class ClothListPage extends StatefulWidget {
   @override
   State<StatefulWidget> createState() => _ClothListPageState();
 }
 
 class _ClothListPageState extends State<ClothListPage> {
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-  }
-
   Future<bool> initClothList() async {
     if (_cloth.length > 0) {
       _cloth.clear();
     }
     await firestoreInstance.collection("cloths").get().then((querySnapshot) {
       querySnapshot.docs.forEach((result) {
-        print(result);
+        /*print(result);
         log(result.get("title"));
         log(result.get("size"));
         log(result.get("price").toString());
         log(result.get("imageSrc"));
         log(result.get("category"));
         log(result.get("brand"));
-        log(result.get("resizeImage").toString());
+        log(result.get("resizeImage").toString());*/
         _cloth.add(Cloth(
             result.get("title").toString(),
             result.get("size").toString(),
@@ -184,14 +205,6 @@ class _ClothListPageState extends State<ClothListPage> {
       log(_cloth.toString());
     });
     return true;
-  }
-
-  @override
-  void didChangeDependencies() {
-    if (_cloth.length > 0) {
-      build(context);
-    }
-    super.didChangeDependencies();
   }
 
   Widget buildItemCard(Cloth c) {
@@ -334,19 +347,19 @@ class _ClothListPageState extends State<ClothListPage> {
                       children: [
                         Scaffold(
                           body: clothList,
-                          bottomNavigationBar: buttonNavigation(0),
+                          bottomNavigationBar: buttonNavigation(0, context),
                         ),
                         Scaffold(
                           body: buildShortedItem("Hauts"),
-                          bottomNavigationBar: buttonNavigation(0),
+                          bottomNavigationBar: buttonNavigation(0, context),
                         ),
                         Scaffold(
                           body: buildShortedItem("Pantalons"),
-                          bottomNavigationBar: buttonNavigation(0),
+                          bottomNavigationBar: buttonNavigation(0, context),
                         ),
                         Scaffold(
                           body: buildShortedItem("Chaussures"),
-                          bottomNavigationBar: buttonNavigation(0),
+                          bottomNavigationBar: buttonNavigation(0, context),
                         )
                       ],
                     )));
@@ -364,28 +377,41 @@ class _ClothListPageState extends State<ClothListPage> {
                 alignment: Alignment.center,
                 child: CircularProgressIndicator(),
               ),
-              bottomNavigationBar: buttonNavigation(0),
+              bottomNavigationBar: buttonNavigation(0, context),
             );
           }
         },
       );
 }
 
-Widget buttonNavigation(int index) {
-  return BottomNavigationBar(items: const <BottomNavigationBarItem>[
-    BottomNavigationBarItem(
-      icon: Icon(Icons.attach_money),
-      label: 'Acheter',
-    ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.shopping_bag),
-      label: 'Panier',
-    ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.person),
-      label: 'Profil',
-    ),
-  ], currentIndex: index);
+Widget buttonNavigation(int index, BuildContext context) {
+  return BottomNavigationBar(
+      items: const <BottomNavigationBarItem>[
+        BottomNavigationBarItem(
+          icon: Icon(Icons.attach_money),
+          label: 'Acheter',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.shopping_bag),
+          label: 'Panier',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person),
+          label: 'Profil',
+        ),
+      ],
+      currentIndex: index,
+      onTap: (value) {
+        if (value == 0 && index != 0) {
+          goToClothListPage(context);
+        }
+        if (value == 1 && index != 1) {
+          goToShoppingCartPage(context);
+        }
+        if (value == 2 && index != 2) {
+          log("pas encore implémenté.");
+        }
+      });
 }
 
 class Cloth {
@@ -399,7 +425,7 @@ class Cloth {
 
   Cloth(this.title, this.size, this.price, this.imageSrc, this.category,
       this.brand, this.resize) {
-    log("new Cloth:" +
+    /*log("new Cloth:" +
         this.title +
         " ; " +
         this.size +
@@ -412,7 +438,7 @@ class Cloth {
         " ; " +
         this.brand +
         " ; " +
-        this.resize.toString());
+        this.resize.toString());*/
   }
 }
 
@@ -484,7 +510,7 @@ class _ClothDetailsPageState extends State<ClothDetailsPage> {
                     backgroundColor:
                         MaterialStateProperty.all<Color>(Colors.orangeAccent),
                   ),
-                  onPressed: () => print(""),
+                  onPressed: () => addItemToCart(selectedCloth),
                   child: RichText(
                     text: TextSpan(
                       children: [
@@ -494,7 +520,7 @@ class _ClothDetailsPageState extends State<ClothDetailsPage> {
                         WidgetSpan(
                           child: Text(
                             ' Ajouter au panier',
-                            style: TextStyle(fontSize: 18),
+                            style: TextStyle(fontSize: 20),
                           ),
                         ),
                       ],
@@ -506,8 +532,194 @@ class _ClothDetailsPageState extends State<ClothDetailsPage> {
   }
 }
 
-void goToLoginPage() {}
+class ShoppingCartPage extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() => _ShoppingCartPageState();
+}
 
-void goToShoppingCartPage() {}
+class _ShoppingCartPageState extends State<ShoppingCartPage> {
+  Future<bool> initClothList() async {
+    //if (_cartCloth.length > 0) {
+    //}
+    await firestoreInstance
+        .collection("users/" + currentUsersUID + "/cart")
+        .get()
+        .then((querySnapshot) {
+      _cartCloth.clear();
+      log("----");
+      querySnapshot.docs.forEach((result) {
+        print(result);
+        log(result.get("title"));
+        log(result.get("size"));
+        log(result.get("price").toString());
+        log(result.get("imageSrc"));
+        log(result.get("category"));
+        log(result.get("brand"));
+        log(result.get("resizeImage").toString());
+        _cartCloth.add(Cloth(
+            result.get("title").toString(),
+            result.get("size").toString(),
+            result.get("price") * 1.0,
+            result.get("imageSrc").toString(),
+            result.get("category").toString(),
+            result.get("brand").toString(),
+            result.get("resizeImage")));
+      });
+      log(_cartCloth.toString());
+    });
+    return true;
+  }
+
+  Widget buildItemCard(Cloth c) {
+    if (c.resize) {
+      return InkWell(
+        child: Card(
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            height: 300,
+            width: double.infinity,
+            decoration: BoxDecoration(
+                image: DecorationImage(
+                    fit: BoxFit.cover, image: NetworkImage(c.imageSrc))),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20.0, 82.0, 20.0, 1.0),
+              child: Container(
+                alignment: Alignment.bottomCenter,
+                color: Colors.white,
+                child: Text(
+                  c.title +
+                      '\nTaille : ' +
+                      c.size +
+                      '\n' +
+                      c.price.toStringAsFixed(2) +
+                      ' €',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+        ),
+        onTap: () => {selectCloth(c), goToClothDetailedPage(context)},
+      );
+    }
+    return InkWell(
+      child: Card(
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          height: 300,
+          width: double.infinity,
+          decoration: BoxDecoration(
+              image: DecorationImage(image: NetworkImage(c.imageSrc))),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20.0, 82.0, 20.0, 1.0),
+            child: Container(
+              alignment: Alignment.bottomCenter,
+              color: Colors.white,
+              child: Text(
+                c.title +
+                    '\nTaille : ' +
+                    c.size +
+                    '\n' +
+                    c.price.toStringAsFixed(2) +
+                    ' €',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
+      ),
+      onTap: () => {selectCloth(c), goToClothDetailedPage(context)},
+    );
+  }
+
+  Widget buildAllItem() {
+    List<Widget> cards = <Widget>[];
+    double i = 0;
+    _cartCloth.forEach((element) {
+      cards.add(buildItemCard(element));
+      i++;
+      log(i.toString());
+    });
+
+    return GridView.count(
+      primary: false,
+      padding: const EdgeInsets.all(20),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      crossAxisCount: 2,
+      children: cards,
+    );
+  }
+
+  Widget buildShortedItem(String cat) {
+    List<Widget> cards = <Widget>[];
+    double i = 0;
+    _cartCloth.forEach((element) {
+      if (element.category == cat) {
+        cards.add(buildItemCard(element));
+        i++;
+        log(i.toString());
+      }
+      if (cat == "Hauts") {
+        if (element.category == "Chemises" || element.category == "T-Shirt") {
+          cards.add(buildItemCard(element));
+          i++;
+          log(i.toString());
+        }
+      }
+    });
+
+    return GridView.count(
+      primary: false,
+      padding: const EdgeInsets.all(20),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      crossAxisCount: 2,
+      children: cards,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+        future: initClothList(),
+        //future: dataInitialized,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            Widget clothList;
+            //initClothList();
+            clothList = buildAllItem();
+            log("ShoppingCartPage");
+            return DefaultTabController(
+                length: 4,
+                child: Scaffold(
+                  appBar: AppBar(
+                    title: Text("MIAGED"),
+                    automaticallyImplyLeading: false,
+                  ),
+                  body: clothList,
+                  bottomNavigationBar: buttonNavigation(1, context),
+                ));
+          } else {
+            Widget clothList;
+            //initClothList();
+            clothList = buildAllItem();
+            log("ShoppingCartPage");
+            return Scaffold(
+              appBar: AppBar(
+                title: Text("MIAGED"),
+                automaticallyImplyLeading: false,
+              ),
+              body: Container(
+                alignment: Alignment.center,
+                child: CircularProgressIndicator(),
+              ),
+              bottomNavigationBar: buttonNavigation(1, context),
+            );
+          }
+        },
+      );
+}
+
+void goToLoginPage() {}
 
 void goToUserPage() {}
