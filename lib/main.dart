@@ -169,7 +169,7 @@ void addItemToCart(Cloth c) {
     'imageSrc': c.imageSrc,
     'category': c.category,
     'brand': c.brand,
-    'resizeImage': c.resize
+    'resizeImage': c.resizeImage
   });
 }
 
@@ -208,7 +208,7 @@ class _ClothListPageState extends State<ClothListPage> {
   }
 
   Widget buildItemCard(Cloth c) {
-    if (c.resize) {
+    if (c.resizeImage) {
       return InkWell(
         child: Card(
           child: Container(
@@ -421,24 +421,28 @@ class Cloth {
   String imageSrc;
   String category; //Chemise, T-Shirt, Chaussure, Pantalon, ...
   String brand;
-  bool resize;
+  bool resizeImage;
 
   Cloth(this.title, this.size, this.price, this.imageSrc, this.category,
-      this.brand, this.resize) {
-    /*log("new Cloth:" +
+      this.brand, this.resizeImage) {
+    /*log(this.toString());*/
+  }
+  @override
+  String toString() {
+    return "title: " +
         this.title +
-        " ; " +
+        " - size; " +
         this.size +
-        " ; " +
+        " - price: " +
         this.price.toString() +
-        " ; " +
+        " - imageSrc: " +
         this.imageSrc +
-        " ; " +
+        " - category: " +
         this.category +
-        " ; " +
+        " - brand: " +
         this.brand +
-        " ; " +
-        this.resize.toString());*/
+        " resizeImage: " +
+        this.resizeImage.toString();
   }
 }
 
@@ -538,6 +542,9 @@ class ShoppingCartPage extends StatefulWidget {
 }
 
 class _ShoppingCartPageState extends State<ShoppingCartPage> {
+  int nombreDArticle = 0;
+  double total = 0;
+
   Future<bool> initClothList() async {
     //if (_cartCloth.length > 0) {
     //}
@@ -546,6 +553,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         .get()
         .then((querySnapshot) {
       _cartCloth.clear();
+      nombreDArticle = 0;
+      total = 0;
       log("----");
       querySnapshot.docs.forEach((result) {
         print(result);
@@ -564,6 +573,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             result.get("category").toString(),
             result.get("brand").toString(),
             result.get("resizeImage")));
+        total += result.get("price") * 1.0;
+        nombreDArticle++;
       });
       log(_cartCloth.toString());
     });
@@ -571,110 +582,78 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Widget buildItemCard(Cloth c) {
-    if (c.resize) {
-      return InkWell(
-        child: Card(
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            height: 300,
-            width: double.infinity,
-            decoration: BoxDecoration(
-                image: DecorationImage(
-                    fit: BoxFit.cover, image: NetworkImage(c.imageSrc))),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20.0, 82.0, 20.0, 1.0),
-              child: Container(
-                alignment: Alignment.bottomCenter,
-                color: Colors.white,
-                child: Text(
-                  c.title +
-                      '\nTaille : ' +
-                      c.size +
-                      '\n' +
-                      c.price.toStringAsFixed(2) +
-                      ' €',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-          ),
+    return Container(
+      child: ListTile(
+        title: Text(c.title),
+        subtitle: Text("Taille : " +
+            c.size +
+            " \n" +
+            c.brand +
+            "\n" +
+            c.price.toStringAsFixed(2) +
+            " € "),
+        isThreeLine: true,
+        leading: Image(
+          alignment: Alignment.center,
+          image: NetworkImage(c.imageSrc),
+          height: 600,
+          width: 60,
         ),
+        trailing: IconButton(
+            icon: Icon(Icons.highlight_off),
+            onPressed: () => print("remove it pleeeeease!")),
         onTap: () => {selectCloth(c), goToClothDetailedPage(context)},
-      );
-    }
-    return InkWell(
-      child: Card(
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          height: 300,
-          width: double.infinity,
-          decoration: BoxDecoration(
-              image: DecorationImage(image: NetworkImage(c.imageSrc))),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20.0, 82.0, 20.0, 1.0),
-            child: Container(
-              alignment: Alignment.bottomCenter,
-              color: Colors.white,
-              child: Text(
-                c.title +
-                    '\nTaille : ' +
-                    c.size +
-                    '\n' +
-                    c.price.toStringAsFixed(2) +
-                    ' €',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ),
       ),
-      onTap: () => {selectCloth(c), goToClothDetailedPage(context)},
+      decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.black26))),
+    );
+  }
+
+  Widget buildInfoRaw() {
+    return Container(
+        child: ListTile(
+      title: Text(
+          "Nombre d'articles : " +
+              nombreDArticle.toString() +
+              "\nTotal : " +
+              total.toStringAsFixed(2) +
+              " €",
+          style: TextStyle(fontSize: 20),
+          textAlign: TextAlign.center),
+    ));
+  }
+
+  Widget title() {
+    return Container(
+      child: ListTile(
+        title: Text("Votre panier",
+            style: TextStyle(/*fontWeight: FontWeight.bold, */ fontSize: 28),
+            textAlign: TextAlign.center),
+      ),
+      decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.black26))),
     );
   }
 
   Widget buildAllItem() {
     List<Widget> cards = <Widget>[];
     double i = 0;
+    cards.add(title());
     _cartCloth.forEach((element) {
       cards.add(buildItemCard(element));
       i++;
       log(i.toString());
     });
-
-    return GridView.count(
-      primary: false,
-      padding: const EdgeInsets.all(20),
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      crossAxisCount: 2,
-      children: cards,
-    );
-  }
-
-  Widget buildShortedItem(String cat) {
-    List<Widget> cards = <Widget>[];
-    double i = 0;
-    _cartCloth.forEach((element) {
-      if (element.category == cat) {
-        cards.add(buildItemCard(element));
-        i++;
-        log(i.toString());
-      }
-      if (cat == "Hauts") {
-        if (element.category == "Chemises" || element.category == "T-Shirt") {
-          cards.add(buildItemCard(element));
-          i++;
-          log(i.toString());
-        }
-      }
-    });
-
-    return GridView.count(
-      primary: false,
-      padding: const EdgeInsets.all(20),
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      crossAxisCount: 2,
+    cards.add(buildInfoRaw());
+    if (_cartCloth.length < 1) {
+      return Container(
+          alignment: Alignment.center,
+          child: Text(
+            "Votre panier est vide.",
+            style: TextStyle(fontSize: 22, color: Colors.grey),
+          ));
+    }
+    return ListView(
       children: cards,
     );
   }
