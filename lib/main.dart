@@ -417,6 +417,7 @@ Widget buttonNavigation(int index, BuildContext context) {
 }
 
 class Cloth {
+  String id = "";
   String title;
   String size;
   double price;
@@ -569,6 +570,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   int nombreDArticle = 0;
   double total = 0;
 
+  void removeItem(Cloth c) {
+    firestoreInstance
+        .collection("users/" + currentUsersUID + "/cart")
+        .doc(c.id)
+        .delete();
+    setState(() {});
+  }
+
   Future<bool> initClothList() async {
     //if (_cartCloth.length > 0) {
     //}
@@ -581,6 +590,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       total = 0;
       //log("----");
       querySnapshot.docs.forEach((result) {
+        print("doc's id: " + result.id.toString());
         /*print(result);
         log(result.get("title"));
         log(result.get("size"));
@@ -589,14 +599,16 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         log(result.get("category"));
         log(result.get("brand"));
         log(result.get("resizeImage").toString());*/
-        _cartCloth.add(Cloth(
+        Cloth c = Cloth(
             result.get("title").toString(),
             result.get("size").toString(),
             result.get("price") * 1.0,
             result.get("imageSrc").toString(),
             result.get("category").toString(),
             result.get("brand").toString(),
-            result.get("resizeImage")));
+            result.get("resizeImage"));
+        c.id = result.id.toString();
+        _cartCloth.add(c);
         total += result.get("price") * 1.0;
         nombreDArticle++;
       });
@@ -625,7 +637,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         ),
         trailing: IconButton(
             icon: Icon(Icons.highlight_off),
-            onPressed: () => print("remove it pleeeeease!")),
+            onPressed: () => /*print("remove it pleeeeease!")*/ removeItem(c)),
         onTap: () => {selectCloth(c), goToClothDetailedPage(context)},
       ),
       decoration: BoxDecoration(
