@@ -202,7 +202,7 @@ class _ClothListPageState extends State<ClothListPage> {
             result.get("brand").toString(),
             result.get("resizeImage")));
       });
-      log(_cloth.toString());
+      //log(_cloth.toString());
     });
     return true;
   }
@@ -275,7 +275,7 @@ class _ClothListPageState extends State<ClothListPage> {
     _cloth.forEach((element) {
       cards.add(buildItemCard(element));
       i++;
-      log(i.toString());
+      //log(i.toString());
     });
 
     return GridView.count(
@@ -295,13 +295,15 @@ class _ClothListPageState extends State<ClothListPage> {
       if (element.category == cat) {
         cards.add(buildItemCard(element));
         i++;
-        log(i.toString());
+        //log(i.toString());
       }
       if (cat == "Hauts") {
-        if (element.category == "Chemises" || element.category == "T-Shirt") {
+        if (element.category == "Chemises" ||
+            element.category == "T-Shirt" ||
+            element.category == "Pull") {
           cards.add(buildItemCard(element));
           i++;
-          log(i.toString());
+          //log(i.toString());
         }
       }
     });
@@ -514,7 +516,29 @@ class _ClothDetailsPageState extends State<ClothDetailsPage> {
                     backgroundColor:
                         MaterialStateProperty.all<Color>(Colors.orangeAccent),
                   ),
-                  onPressed: () => addItemToCart(selectedCloth),
+                  onPressed: //() => addItemToCart(selectedCloth),
+                      () => showDialog<String>(
+                            context: context,
+                            builder: (BuildContext context) => AlertDialog(
+                              title: const Text('Ajouter au panier'),
+                              content: const Text(
+                                  'Souhaitez-vous ajouter cet article à votre panier ?'),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, 'Cancel'),
+                                  child: const Text('Non'),
+                                ),
+                                TextButton(
+                                  onPressed: () => {
+                                    Navigator.pop(context, 'OK'),
+                                    addItemToCart(selectedCloth)
+                                  },
+                                  child: const Text('Oui'),
+                                ),
+                              ],
+                            ),
+                          ),
                   child: RichText(
                     text: TextSpan(
                       children: [
@@ -555,16 +579,16 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       _cartCloth.clear();
       nombreDArticle = 0;
       total = 0;
-      log("----");
+      //log("----");
       querySnapshot.docs.forEach((result) {
-        print(result);
+        /*print(result);
         log(result.get("title"));
         log(result.get("size"));
         log(result.get("price").toString());
         log(result.get("imageSrc"));
         log(result.get("category"));
         log(result.get("brand"));
-        log(result.get("resizeImage").toString());
+        log(result.get("resizeImage").toString());*/
         _cartCloth.add(Cloth(
             result.get("title").toString(),
             result.get("size").toString(),
@@ -576,7 +600,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         total += result.get("price") * 1.0;
         nombreDArticle++;
       });
-      log(_cartCloth.toString());
+      //log(_cartCloth.toString());
     });
     return true;
   }
@@ -642,7 +666,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     _cartCloth.forEach((element) {
       cards.add(buildItemCard(element));
       i++;
-      log(i.toString());
+      //log(i.toString());
     });
     cards.add(buildInfoRaw());
     if (_cartCloth.length < 1) {
