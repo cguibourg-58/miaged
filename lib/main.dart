@@ -8,6 +8,8 @@ import 'package:firebase_core/firebase_core.dart'; // new
 import 'package:firebase_auth/firebase_auth.dart'; // new
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_restart/flutter_restart.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart'; // new
 
@@ -21,9 +23,23 @@ void main() {
 
 Cloth selectedCloth = Cloth("", "", 0, "", "", "", false);
 String currentUsersUID = "";
+FirebaseFirestore firestoreInstance = FirebaseFirestore.instance;
+List _cloth = <Cloth>[];
+List _cartCloth = <Cloth>[];
+UserProfile currentUser = UserProfile("", "", "", "", "", "", "");
+bool logged = false;
 
 void selectCloth(Cloth c) {
   selectedCloth = c;
+}
+
+void goToLoginPage(BuildContext c) {
+  /*Navigator.push(
+    c,
+    MaterialPageRoute(builder: (context) => MyApp()),
+  );*/
+  Navigator.pushAndRemoveUntil(
+      c, MaterialPageRoute(builder: (context) => MyApp()), (route) => false);
 }
 
 void goToClothListPage(BuildContext c) {
@@ -47,9 +63,12 @@ void goToShoppingCartPage(BuildContext c) {
   );
 }
 
-FirebaseFirestore firestoreInstance = FirebaseFirestore.instance;
-List _cloth = <Cloth>[];
-List _cartCloth = <Cloth>[];
+void goToUserProfilPage(BuildContext c) {
+  Navigator.push(
+    c,
+    MaterialPageRoute(builder: (context) => UserProfilPage()),
+  );
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -95,16 +114,22 @@ class _LoginPageState extends State<LoginPage> {
     return Container(
         child: Column(
       children: [
-        TextFormField(
-          controller: _textLogin,
-          decoration:
-              InputDecoration(border: OutlineInputBorder(), hintText: "Login"),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 15, 8, 8),
+          child: TextFormField(
+            controller: _textLogin,
+            decoration: InputDecoration(
+                border: OutlineInputBorder(), labelText: "Login"),
+          ),
         ),
-        TextFormField(
-          controller: _textPassword,
-          obscureText: true,
-          decoration: InputDecoration(
-              border: OutlineInputBorder(), hintText: "Password"),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextFormField(
+            controller: _textPassword,
+            obscureText: true,
+            decoration: InputDecoration(
+                border: OutlineInputBorder(), labelText: "Password"),
+          ),
         ),
         ElevatedButton(
           style: ButtonStyle(
@@ -146,10 +171,12 @@ class _LoginPageState extends State<LoginPage> {
       final User? user = FirebaseAuth.instance.currentUser;
       final uid = user!.uid;
       currentUsersUID = uid.toString();
+//      currentUser.setUserProfileValues(currentUsersUID, u.get("email"), u.password, birthday, address, postalCode, city)
       log("uid: " + currentUsersUID);
       loggedIn = true;
       _cloth.clear();
       goToClothListPage(context);
+      getCurrentUsersDataFromFirestore();
       //log("nice tu es connecté");
     } /*on FirebaseAuthException */ catch (e) {
       log('Failed with error code: ${e}');
@@ -157,6 +184,38 @@ class _LoginPageState extends State<LoginPage> {
       log("dsl tu n'as pas mis le bon email et/ou le bon mot de passe");
     }
   }
+}
+
+void updateUsersData(String password, String birthday, String address,
+    String postalCode, String city) {
+  FirebaseFirestore.instance.collection("users").doc(currentUsersUID).update({
+    'password': password,
+    'birthday': birthday,
+    'address': address,
+    'postalCode': postalCode,
+    'city': city
+  });
+}
+
+void getCurrentUsersDataFromFirestore() {
+  FirebaseFirestore.instance
+      .collection("users")
+      .doc(currentUsersUID)
+      .get()
+      .then((DocumentSnapshot documentSnapshot) {
+    if (documentSnapshot.exists) {
+      log('Document exists on the database');
+      currentUser = UserProfile(
+          currentUsersUID,
+          documentSnapshot.get("email"),
+          documentSnapshot.get("password"),
+          documentSnapshot.get("birthday"),
+          documentSnapshot.get("address"),
+          documentSnapshot.get("postalCode"),
+          documentSnapshot.get("city"));
+      //print(currentUser.toString());
+    }
+  });
 }
 
 void addItemToCart(Cloth c) {
@@ -300,7 +359,9 @@ class _ClothListPageState extends State<ClothListPage> {
       if (cat == "Hauts") {
         if (element.category == "Chemises" ||
             element.category == "T-Shirt" ||
-            element.category == "Pull") {
+            element.category == "Pull" ||
+            element.category == "Pull à capuche" ||
+            element.category == "Crop-top") {
           cards.add(buildItemCard(element));
           i++;
           //log(i.toString());
@@ -411,7 +472,7 @@ Widget buttonNavigation(int index, BuildContext context) {
           goToShoppingCartPage(context);
         }
         if (value == 2 && index != 2) {
-          log("pas encore implémenté.");
+          goToUserProfilPage(context);
         }
       });
 }
@@ -446,6 +507,38 @@ class Cloth {
         this.brand +
         " resizeImage: " +
         this.resizeImage.toString();
+  }
+}
+
+class UserProfile {
+  String uid;
+  String email;
+  String password;
+  String birthday;
+  String address;
+  String postalCode;
+  String city;
+
+  UserProfile(this.uid, this.email, this.password, this.birthday, this.address,
+      this.postalCode, this.city);
+
+  @override
+  String toString() {
+    // TODO: implement toString
+    return "uid: " +
+        uid +
+        "email: " +
+        email +
+        "\npassword: " +
+        password +
+        "\nbirthday: " +
+        birthday +
+        "\naddress: " +
+        address +
+        "\npostalCode: " +
+        postalCode +
+        "\ncity: " +
+        city;
   }
 }
 
@@ -649,13 +742,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     return Container(
         child: ListTile(
       title: Text(
-          "Nombre d'articles : " +
-              nombreDArticle.toString() +
-              "\nTotal : " +
-              total.toStringAsFixed(2) +
-              " €",
-          style: TextStyle(fontSize: 20),
-          textAlign: TextAlign.center),
+        "\nNombre d'articles : " +
+            nombreDArticle.toString() +
+            "\nTotal : " +
+            total.toStringAsFixed(2) +
+            " €",
+        style: TextStyle(fontSize: 20),
+        textAlign: TextAlign.center,
+      ),
     ));
   }
 
@@ -678,7 +772,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     _cartCloth.forEach((element) {
       cards.add(buildItemCard(element));
       i++;
-      //log(i.toString());
+      log(i.toString());
     });
     cards.add(buildInfoRaw());
     if (_cartCloth.length < 1) {
@@ -735,6 +829,169 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       );
 }
 
-void goToLoginPage() {}
+class UserProfilPage extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() => _UserProfilPageState();
+}
 
-void goToUserPage() {}
+class _UserProfilPageState extends State<UserProfilPage> {
+  TextEditingController _password =
+      TextEditingController(text: currentUser.password);
+  TextEditingController _birthday =
+      TextEditingController(text: currentUser.birthday);
+  TextEditingController _address =
+      TextEditingController(text: currentUser.address);
+  TextEditingController _postalCode =
+      TextEditingController(text: currentUser.postalCode);
+  TextEditingController _city = TextEditingController(text: currentUser.city);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'MIAGED',
+      theme: ThemeData(
+        primarySwatch: Colors.red,
+      ),
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text("MIAGED"),
+          automaticallyImplyLeading: false,
+        ),
+        body: Container(
+            child: ListView(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(30, 15, 30, 4),
+              child: TextFormField(
+                initialValue: currentUser.email,
+                enabled: false,
+                decoration: InputDecoration(labelText: "Login"),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
+              child: TextFormField(
+                controller: _password,
+                obscureText: true,
+                decoration: InputDecoration(labelText: "Password"),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
+              child: TextFormField(
+                  controller: _birthday,
+                  decoration: InputDecoration(labelText: "Anniversaire"),
+                  onTap: () {
+                    _selectDate(context, _birthday);
+                  }),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
+              child: TextFormField(
+                controller: _address,
+                decoration: InputDecoration(labelText: "Adresse"),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
+              child: TextFormField(
+                  controller: _postalCode,
+                  decoration: InputDecoration(labelText: "Code postal"),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
+              child: TextFormField(
+                controller: _city,
+                decoration: InputDecoration(labelText: "Ville"),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(70, 16, 70, 0),
+              child: ElevatedButton(
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all<Color>(Colors.red),
+                ),
+                onPressed: () {
+                  () => print("watt ze phoque!?");
+                  showDialog<String>(
+                    context: context,
+                    builder: (BuildContext context) => AlertDialog(
+                      title: const Text('Valider'),
+                      content: const Text(
+                          'Voulez-vous vraiment modifier vos données ?'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, 'Cancel'),
+                          child: const Text('Non'),
+                        ),
+                        TextButton(
+                          onPressed: () => {
+                            Navigator.pop(context, 'OK'),
+                            updateUsersData(_password.text, _birthday.text,
+                                _address.text, _postalCode.text, _city.text)
+                          },
+                          child: const Text('Oui'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                child: const Text('Valider'),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(70, 16, 70, 0),
+              child: ElevatedButton(
+                style: ButtonStyle(
+                  backgroundColor:
+                      MaterialStateProperty.all<Color>(Colors.black),
+                ),
+                onPressed: () {
+                  logout(context);
+                },
+                child: const Text('Se déconnecter'),
+              ),
+            ),
+          ],
+        )),
+        bottomNavigationBar: buttonNavigation(2, context),
+      ),
+    );
+  }
+}
+
+//DateTime selectedDate = DateTime.now();
+
+_selectDate(BuildContext context, TextEditingController t) async {
+  final DateTime? selectedDate = await showDatePicker(
+    confirmText: 'Modifier', context: context,
+    initialEntryMode: DatePickerEntryMode.calendarOnly,
+    initialDate: DateTime(
+        DateTime.now().year - 18, DateTime.now().month, DateTime.now().day),
+    firstDate: DateTime(1950, 1, 1),
+    lastDate: DateTime(
+        DateTime.now().year - 18, DateTime.now().month, DateTime.now().day),
+    initialDatePickerMode: DatePickerMode.year,
+    helpText: "Date d'anniversaire", // Can be used as title
+    cancelText: 'Annuler',
+  );
+  if (selectedDate != null) {
+    t.text = selectedDate.day.toString() +
+        "/" +
+        selectedDate.month.toString() +
+        "/" +
+        selectedDate.year.toString();
+  }
+}
+
+Future<void> logout(BuildContext c) async {
+  await FirebaseAuth.instance.signOut();
+  selectedCloth = Cloth("", "", 0, "", "", "", false);
+  _cloth = [];
+  currentUsersUID = "";
+  currentUser = UserProfile("", "", "", "", "", "", "");
+  //FlutterRestart.restartApp();
+  goToLoginPage(c);
+}
