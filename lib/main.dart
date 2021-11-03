@@ -15,6 +15,7 @@ import 'package:provider/provider.dart'; // new
 
 import 'src/authentication.dart'; // new
 import 'src/widgets.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() {
   //Firebase.initializeApp();
@@ -78,8 +79,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MIAGED',
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: [
+        Locale('en', ''), // English, no country code
+        Locale('fr', 'FR'), // France, country code
+      ],
       theme: ThemeData(
-        primarySwatch: Colors.red,
+        primarySwatch: Colors.deepPurple,
       ),
       home: Scaffold(
           appBar: AppBar(
@@ -188,7 +198,7 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 void updateUsersData(String password, String birthday, String address,
-    String postalCode, String city) {
+    String postalCode, String city, bool passwordChanged) {
   FirebaseFirestore.instance.collection("users").doc(currentUsersUID).update({
     'password': password,
     'birthday': birthday,
@@ -196,12 +206,14 @@ void updateUsersData(String password, String birthday, String address,
     'postalCode': postalCode,
     'city': city
   });
-  currentUser!.updatePassword(password).then((_) {
-    log("Successfully changed password");
-  }).catchError((error) {
-    log("Password can't be changed" + error.toString());
-    //This might happen, when the wrong password is in, the user isn't found, or if the user hasn't logged in recently.
-  });
+  if (passwordChanged) {
+    currentUser!.updatePassword(password).then((_) {
+      log("Successfully changed password");
+    }).catchError((error) {
+      log("Password can't be changed" + error.toString());
+      //This might happen, when the wrong password is in, the user isn't found, or if the user hasn't logged in recently.
+    });
+  }
 }
 
 void getCurrentUsersDataFromFirestore() {
@@ -246,10 +258,10 @@ class ClothListPage extends StatefulWidget {
 
 class _ClothListPageState extends State<ClothListPage> {
   Future<bool> initClothList() async {
-    if (_cloth.length > 0) {
-      _cloth.clear();
-    }
     await firestoreInstance.collection("cloths").get().then((querySnapshot) {
+      if (_cloth.length > 0) {
+        _cloth.clear();
+      }
       querySnapshot.docs.forEach((result) {
         /*print(result);
         log(result.get("title"));
@@ -855,119 +867,249 @@ class _UserProfilPageState extends State<UserProfilPage> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MIAGED',
-      theme: ThemeData(
-        primarySwatch: Colors.red,
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("MIAGED"),
+        automaticallyImplyLeading: false,
       ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text("MIAGED"),
-          automaticallyImplyLeading: false,
-        ),
-        body: Container(
-            child: ListView(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(30, 15, 30, 4),
-              child: TextFormField(
-                initialValue: currentUserProfile.email,
-                enabled: false,
-                decoration: InputDecoration(labelText: "Login"),
-              ),
+      body: Container(
+          child: ListView(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(30, 15, 30, 4),
+            child: TextFormField(
+              initialValue: currentUserProfile.email,
+              enabled: false,
+              decoration: InputDecoration(labelText: "Login"),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
-              child: TextFormField(
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
+            child: TextFormField(
                 controller: _password,
+                readOnly: true,
                 obscureText: true,
-                decoration: InputDecoration(labelText: "Password"),
+                decoration: InputDecoration(labelText: "Mot de passe"),
+                onTap: () {
+                  //String s = "avant";
+                  showDialog(
+                      context: context,
+                      builder: (BuildContext context) => AlertDialog(
+                            title: Text("Changer de mot de passe"),
+                            content: //Container(
+                                changePasswordForm(context),
+                            actions: <Widget>[
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(context, 'Cancel'),
+                                child: const Text('Annuler'),
+                              ),
+                              TextButton(
+                                onPressed: () => {
+                                  //log(s),
+                                  //changeColor = !changeColor,
+                                  checkNewPassword(),
+                                  if (changePassword)
+                                    {
+                                      Navigator.pop(context, 'OK'),
+                                      /*_currentPassword.text = "",
+                                      _newPassword.text = "",
+                                      _newPasswordVerification.text = "",*/
+                                    }
+                                  else
+                                    {
+                                      showDialog(
+                                          context: context,
+                                          builder: (BuildContext context) =>
+                                              AlertDialog(
+                                                  title: Text("Erreur"),
+                                                  content: Text(
+                                                      changePasswordErrorMessage,
+                                                      style: TextStyle(
+                                                          color: Colors.red))))
+                                    }
+                                },
+                                child: const Text('Modifier'),
+                              ),
+                            ],
+                          ));
+                }),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
+            child: TextFormField(
+                readOnly: true,
+                controller: _birthday,
+                decoration: InputDecoration(labelText: "Anniversaire"),
+                onTap: () {
+                  _selectDate(context, _birthday);
+                }),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
+            child: TextFormField(
+              controller: _address,
+              decoration: InputDecoration(labelText: "Adresse"),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
+            child: TextFormField(
+                controller: _postalCode,
+                decoration: InputDecoration(labelText: "Code postal"),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
+            child: TextFormField(
+              controller: _city,
+              decoration: InputDecoration(labelText: "Ville"),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(70, 16, 70, 0),
+            child: ElevatedButton(
+              child: const Text('Valider'),
+              style: ButtonStyle(
+                backgroundColor: MaterialStateProperty.all<Color>(Colors.red),
               ),
+              onPressed: () {
+                //() => print("watt ze phoque!?");
+                showDialog<String>(
+                  context: context,
+                  builder: (BuildContext context) => AlertDialog(
+                    content: const Text(
+                        'Voulez-vous vraiment modifier vos données ?'),
+                    actions: <Widget>[
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, 'Cancel'),
+                        child: const Text('Non'),
+                      ),
+                      TextButton(
+                        onPressed: () => {
+                          Navigator.pop(context, 'OK'),
+                          updateUsersData(
+                              _password.text,
+                              _birthday.text,
+                              _address.text,
+                              _postalCode.text,
+                              _city.text,
+                              changePassword)
+                        },
+                        child: const Text('Oui'),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
-              child: TextFormField(
-                  readOnly: true,
-                  controller: _birthday,
-                  decoration: InputDecoration(labelText: "Anniversaire"),
-                  onTap: () {
-                    _selectDate(context, _birthday);
-                  }),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
-              child: TextFormField(
-                controller: _address,
-                decoration: InputDecoration(labelText: "Adresse"),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(70, 16, 70, 0),
+            child: ElevatedButton(
+              style: ButtonStyle(
+                backgroundColor: MaterialStateProperty.all<Color>(Colors.black),
               ),
+              onPressed: () {
+                showDialog<String>(
+                  context: context,
+                  builder: (BuildContext context) => AlertDialog(
+                    content:
+                        const Text('Voulez-vous vraiment vous déconnecter ?'),
+                    actions: <Widget>[
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, 'Cancel'),
+                        child: const Text('Non'),
+                      ),
+                      TextButton(
+                        onPressed: () => {
+                          Navigator.pop(context, 'OK'),
+                          logout(context),
+                        },
+                        child: const Text('Oui'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: const Text('Se déconnecter'),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
-              child: TextFormField(
-                  controller: _postalCode,
-                  decoration: InputDecoration(labelText: "Code postal"),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
-              child: TextFormField(
-                controller: _city,
-                decoration: InputDecoration(labelText: "Ville"),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(70, 16, 70, 0),
-              child: ElevatedButton(
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all<Color>(Colors.red),
-                ),
-                onPressed: () {
-                  //() => print("watt ze phoque!?");
-                  showDialog<String>(
-                    context: context,
-                    builder: (BuildContext context) => AlertDialog(
-                      title: const Text('Valider'),
-                      content: const Text(
-                          'Voulez-vous vraiment modifier vos données ?'),
-                      actions: <Widget>[
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, 'Cancel'),
-                          child: const Text('Non'),
-                        ),
-                        TextButton(
-                          onPressed: () => {
-                            Navigator.pop(context, 'OK'),
-                            updateUsersData(_password.text, _birthday.text,
-                                _address.text, _postalCode.text, _city.text)
-                          },
-                          child: const Text('Oui'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                child: const Text('Valider'),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(70, 16, 70, 0),
-              child: ElevatedButton(
-                style: ButtonStyle(
-                  backgroundColor:
-                      MaterialStateProperty.all<Color>(Colors.black),
-                ),
-                onPressed: () {
-                  logout(context);
-                },
-                child: const Text('Se déconnecter'),
-              ),
-            ),
-          ],
-        )),
-        bottomNavigationBar: buttonNavigation(2, context),
-      ),
+          ),
+        ],
+      )),
+      bottomNavigationBar: buttonNavigation(2, context),
     );
+  }
+
+  TextEditingController _currentPassword = TextEditingController();
+  TextEditingController _newPassword = TextEditingController();
+  TextEditingController _newPasswordVerification = TextEditingController();
+  String changePasswordErrorMessage = "";
+
+  bool changePassword = false;
+
+  void checkNewPassword() {
+    changePassword = _password.text == _currentPassword.text &&
+        _newPassword.text == _newPasswordVerification.text;
+    if (_currentPassword.text == "") {
+      changePasswordErrorMessage =
+          "Veuillez remplir les trois champs de saisie.";
+    } else if (_password.text != _currentPassword.text) {
+      changePasswordErrorMessage = "Mot de passe incorrect.";
+    } else if (_newPassword.text != _newPasswordVerification.text) {
+      changePasswordErrorMessage =
+          "Vérifiez le texte de votre nouveau mot de passe.";
+    } else if (changePassword) {
+      log("c'est good !");
+      _password.text = _newPassword.text;
+    }
+  }
+
+  changePasswordForm(BuildContext context) {
+    bool goodPassword = false;
+
+    TextStyle currentPasswordFieldStyle = TextStyle();
+    return Container(
+        height: 250,
+        width: 500,
+        child: ListView(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(5, 2, 5, 2),
+            child: TextFormField(
+              obscureText: true,
+              controller: _currentPassword,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter some text';
+                }
+                return null;
+              },
+              decoration: InputDecoration(
+                labelText: "Entrez le mot de passe actuel",
+                labelStyle: currentPasswordFieldStyle,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(5, 2, 5, 2),
+            child: TextFormField(
+              obscureText: true,
+              controller: _newPassword,
+              decoration: InputDecoration(
+                  labelText: "Indiquer le nouveau mot de passe"),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(5, 2, 5, 2),
+            child: TextFormField(
+              obscureText: true,
+              controller: _newPasswordVerification,
+              decoration: InputDecoration(
+                  labelText: "Confirmer le nouveau mot de passe"),
+            ),
+          ),
+        ]));
   }
 }
 
@@ -975,7 +1117,9 @@ class _UserProfilPageState extends State<UserProfilPage> {
 
 _selectDate(BuildContext context, TextEditingController t) async {
   final DateTime? selectedDate = await showDatePicker(
-    confirmText: 'Modifier', context: context,
+    confirmText: 'Modifier',
+    context: context,
+    locale: const Locale("fr", "FR"),
     initialEntryMode: DatePickerEntryMode.calendarOnly,
     initialDate: DateTime(
         DateTime.now().year - 18, DateTime.now().month, DateTime.now().day),
@@ -996,7 +1140,7 @@ _selectDate(BuildContext context, TextEditingController t) async {
 }
 
 Future<void> logout(BuildContext c) async {
-  await FirebaseAuth.instance.signOut();
+  await FirebaseAuth.instance.signOut().then((value) => null);
   selectedCloth = Cloth("", "", 0, "", "", "", false);
   _cloth = [];
   currentUsersUID = "";
