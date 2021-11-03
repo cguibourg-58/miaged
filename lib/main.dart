@@ -18,7 +18,9 @@ import 'src/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() {
-  //Firebase.initializeApp();
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations(
+      [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
   runApp((MyApp()));
 }
 
