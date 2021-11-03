@@ -26,8 +26,9 @@ String currentUsersUID = "";
 FirebaseFirestore firestoreInstance = FirebaseFirestore.instance;
 List _cloth = <Cloth>[];
 List _cartCloth = <Cloth>[];
-UserProfile currentUser = UserProfile("", "", "", "", "", "", "");
+UserProfile currentUserProfile = UserProfile("", "", "", "", "", "", "");
 bool logged = false;
+User? currentUser;
 
 void selectCloth(Cloth c) {
   selectedCloth = c;
@@ -168,8 +169,8 @@ class _LoginPageState extends State<LoginPage> {
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(
               email: _textLogin.text, password: _textPassword.text);
-      final User? user = FirebaseAuth.instance.currentUser;
-      final uid = user!.uid;
+      currentUser = FirebaseAuth.instance.currentUser;
+      final uid = currentUser!.uid;
       currentUsersUID = uid.toString();
 //      currentUser.setUserProfileValues(currentUsersUID, u.get("email"), u.password, birthday, address, postalCode, city)
       log("uid: " + currentUsersUID);
@@ -195,6 +196,12 @@ void updateUsersData(String password, String birthday, String address,
     'postalCode': postalCode,
     'city': city
   });
+  currentUser!.updatePassword(password).then((_) {
+    log("Successfully changed password");
+  }).catchError((error) {
+    log("Password can't be changed" + error.toString());
+    //This might happen, when the wrong password is in, the user isn't found, or if the user hasn't logged in recently.
+  });
 }
 
 void getCurrentUsersDataFromFirestore() {
@@ -205,7 +212,7 @@ void getCurrentUsersDataFromFirestore() {
       .then((DocumentSnapshot documentSnapshot) {
     if (documentSnapshot.exists) {
       log('Document exists on the database');
-      currentUser = UserProfile(
+      currentUserProfile = UserProfile(
           currentUsersUID,
           documentSnapshot.get("email"),
           documentSnapshot.get("password"),
@@ -836,14 +843,15 @@ class UserProfilPage extends StatefulWidget {
 
 class _UserProfilPageState extends State<UserProfilPage> {
   TextEditingController _password =
-      TextEditingController(text: currentUser.password);
+      TextEditingController(text: currentUserProfile.password);
   TextEditingController _birthday =
-      TextEditingController(text: currentUser.birthday);
+      TextEditingController(text: currentUserProfile.birthday);
   TextEditingController _address =
-      TextEditingController(text: currentUser.address);
+      TextEditingController(text: currentUserProfile.address);
   TextEditingController _postalCode =
-      TextEditingController(text: currentUser.postalCode);
-  TextEditingController _city = TextEditingController(text: currentUser.city);
+      TextEditingController(text: currentUserProfile.postalCode);
+  TextEditingController _city =
+      TextEditingController(text: currentUserProfile.city);
 
   @override
   Widget build(BuildContext context) {
@@ -863,7 +871,7 @@ class _UserProfilPageState extends State<UserProfilPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(30, 15, 30, 4),
               child: TextFormField(
-                initialValue: currentUser.email,
+                initialValue: currentUserProfile.email,
                 enabled: false,
                 decoration: InputDecoration(labelText: "Login"),
               ),
@@ -879,6 +887,7 @@ class _UserProfilPageState extends State<UserProfilPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(30, 4, 30, 4),
               child: TextFormField(
+                  readOnly: true,
                   controller: _birthday,
                   decoration: InputDecoration(labelText: "Anniversaire"),
                   onTap: () {
@@ -914,7 +923,7 @@ class _UserProfilPageState extends State<UserProfilPage> {
                   backgroundColor: MaterialStateProperty.all<Color>(Colors.red),
                 ),
                 onPressed: () {
-                  () => print("watt ze phoque!?");
+                  //() => print("watt ze phoque!?");
                   showDialog<String>(
                     context: context,
                     builder: (BuildContext context) => AlertDialog(
@@ -991,7 +1000,7 @@ Future<void> logout(BuildContext c) async {
   selectedCloth = Cloth("", "", 0, "", "", "", false);
   _cloth = [];
   currentUsersUID = "";
-  currentUser = UserProfile("", "", "", "", "", "", "");
+  currentUserProfile = UserProfile("", "", "", "", "", "", "");
   //FlutterRestart.restartApp();
   goToLoginPage(c);
 }
