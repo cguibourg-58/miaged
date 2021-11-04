@@ -3,27 +3,21 @@ import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
-import 'package:firebase_core/firebase_core.dart'; // new
-import 'package:firebase_auth/firebase_auth.dart'; // new
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_restart/flutter_restart.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart'; // new
-
-import 'src/authentication.dart'; // new
-import 'src/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations(
-      [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
-  runApp((MyApp()));
-}
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'src/authentication.dart';
+import 'src/widgets.dart';
+
+//****Global arguments****//
 Cloth selectedCloth = Cloth("", "", 0, "", "", "", false);
 String currentUsersUID = "";
 FirebaseFirestore firestoreInstance = FirebaseFirestore.instance;
@@ -32,46 +26,13 @@ List _cartCloth = <Cloth>[];
 UserProfile currentUserProfile = UserProfile("", "", "", "", "", "", "");
 bool logged = false;
 User? currentUser;
+//********//
 
-void selectCloth(Cloth c) {
-  selectedCloth = c;
-}
-
-void goToLoginPage(BuildContext c) {
-  /*Navigator.push(
-    c,
-    MaterialPageRoute(builder: (context) => MyApp()),
-  );*/
-  Navigator.pushAndRemoveUntil(
-      c, MaterialPageRoute(builder: (context) => MyApp()), (route) => false);
-}
-
-void goToClothListPage(BuildContext c) {
-  Navigator.push(
-    c,
-    MaterialPageRoute(builder: (context) => ClothListPage()),
-  );
-}
-
-void goToClothDetailedPage(BuildContext c) {
-  Navigator.push(
-    c,
-    MaterialPageRoute(builder: (context) => ClothDetailsPage()),
-  );
-}
-
-void goToShoppingCartPage(BuildContext c) {
-  Navigator.push(
-    c,
-    MaterialPageRoute(builder: (context) => ShoppingCartPage()),
-  );
-}
-
-void goToUserProfilPage(BuildContext c) {
-  Navigator.push(
-    c,
-    MaterialPageRoute(builder: (context) => UserProfilPage()),
-  );
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations(
+      [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+  runApp((MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -197,60 +158,6 @@ class _LoginPageState extends State<LoginPage> {
       log("dsl tu n'as pas mis le bon email et/ou le bon mot de passe");
     }
   }
-}
-
-void updateUsersData(String password, String birthday, String address,
-    String postalCode, String city, bool passwordChanged) {
-  FirebaseFirestore.instance.collection("users").doc(currentUsersUID).update({
-    'password': password,
-    'birthday': birthday,
-    'address': address,
-    'postalCode': postalCode,
-    'city': city
-  });
-  if (passwordChanged) {
-    currentUser!.updatePassword(password).then((_) {
-      log("Successfully changed password");
-    }).catchError((error) {
-      log("Password can't be changed" + error.toString());
-      //This might happen, when the wrong password is in, the user isn't found, or if the user hasn't logged in recently.
-    });
-  }
-}
-
-void getCurrentUsersDataFromFirestore() {
-  FirebaseFirestore.instance
-      .collection("users")
-      .doc(currentUsersUID)
-      .get()
-      .then((DocumentSnapshot documentSnapshot) {
-    if (documentSnapshot.exists) {
-      log('Document exists on the database');
-      currentUserProfile = UserProfile(
-          currentUsersUID,
-          documentSnapshot.get("email"),
-          documentSnapshot.get("password"),
-          documentSnapshot.get("birthday"),
-          documentSnapshot.get("address"),
-          documentSnapshot.get("postalCode"),
-          documentSnapshot.get("city"));
-      //print(currentUser.toString());
-    }
-  });
-}
-
-void addItemToCart(Cloth c) {
-  FirebaseFirestore.instance
-      .collection("users/" + currentUsersUID + "/cart")
-      .add({
-    'title': c.title,
-    'size': c.size,
-    'price': c.price,
-    'imageSrc': c.imageSrc,
-    'category': c.category,
-    'brand': c.brand,
-    'resizeImage': c.resizeImage
-  });
 }
 
 class ClothListPage extends StatefulWidget {
@@ -466,101 +373,6 @@ class _ClothListPageState extends State<ClothListPage> {
           }
         },
       );
-}
-
-Widget buttonNavigation(int index, BuildContext context) {
-  return BottomNavigationBar(
-      items: const <BottomNavigationBarItem>[
-        BottomNavigationBarItem(
-          icon: Icon(Icons.attach_money),
-          label: 'Acheter',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.shopping_bag),
-          label: 'Panier',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: 'Profil',
-        ),
-      ],
-      currentIndex: index,
-      onTap: (value) {
-        if (value == 0 && index != 0) {
-          goToClothListPage(context);
-        }
-        if (value == 1 && index != 1) {
-          goToShoppingCartPage(context);
-        }
-        if (value == 2 && index != 2) {
-          goToUserProfilPage(context);
-        }
-      });
-}
-
-class Cloth {
-  String id = "";
-  String title;
-  String size;
-  double price;
-  String imageSrc;
-  String category; //Chemise, T-Shirt, Chaussure, Pantalon, ...
-  String brand;
-  bool resizeImage;
-
-  Cloth(this.title, this.size, this.price, this.imageSrc, this.category,
-      this.brand, this.resizeImage) {
-    /*log(this.toString());*/
-  }
-  @override
-  String toString() {
-    return "title: " +
-        this.title +
-        " - size; " +
-        this.size +
-        " - price: " +
-        this.price.toString() +
-        " - imageSrc: " +
-        this.imageSrc +
-        " - category: " +
-        this.category +
-        " - brand: " +
-        this.brand +
-        " resizeImage: " +
-        this.resizeImage.toString();
-  }
-}
-
-class UserProfile {
-  String uid;
-  String email;
-  String password;
-  String birthday;
-  String address;
-  String postalCode;
-  String city;
-
-  UserProfile(this.uid, this.email, this.password, this.birthday, this.address,
-      this.postalCode, this.city);
-
-  @override
-  String toString() {
-    // TODO: implement toString
-    return "uid: " +
-        uid +
-        "email: " +
-        email +
-        "\npassword: " +
-        password +
-        "\nbirthday: " +
-        birthday +
-        "\naddress: " +
-        address +
-        "\npostalCode: " +
-        postalCode +
-        "\ncity: " +
-        city;
-  }
 }
 
 class ClothDetailsPage extends StatefulWidget {
@@ -1178,9 +990,139 @@ class _UserProfilPageState extends State<UserProfilPage> {
   }
 }
 
-//DateTime selectedDate = DateTime.now();
+//****Functions****//
 
-_selectDate(BuildContext context, TextEditingController t) async {
+/**Navigation functions**/
+void goToLoginPage(BuildContext c) {
+  /*Navigator.push(
+    c,
+    MaterialPageRoute(builder: (context) => MyApp()),
+  );*/
+  Navigator.pushAndRemoveUntil(
+      c, MaterialPageRoute(builder: (context) => MyApp()), (route) => false);
+}
+
+void goToClothListPage(BuildContext c) {
+  Navigator.push(
+    c,
+    MaterialPageRoute(builder: (context) => ClothListPage()),
+  );
+}
+
+void goToClothDetailedPage(BuildContext c) {
+  Navigator.push(
+    c,
+    MaterialPageRoute(builder: (context) => ClothDetailsPage()),
+  );
+}
+
+void goToShoppingCartPage(BuildContext c) {
+  Navigator.push(
+    c,
+    MaterialPageRoute(builder: (context) => ShoppingCartPage()),
+  );
+}
+
+void goToUserProfilPage(BuildContext c) {
+  Navigator.push(
+    c,
+    MaterialPageRoute(builder: (context) => UserProfilPage()),
+  );
+}
+/****/
+
+/**Handle User's data functions**/
+void updateUsersData(String password, String birthday, String address,
+    String postalCode, String city, bool passwordChanged) {
+  FirebaseFirestore.instance.collection("users").doc(currentUsersUID).update({
+    'password': password,
+    'birthday': birthday,
+    'address': address,
+    'postalCode': postalCode,
+    'city': city
+  });
+  if (passwordChanged) {
+    currentUser!.updatePassword(password).then((_) {
+      log("Successfully changed password");
+    }).catchError((error) {
+      log("Password can't be changed" + error.toString());
+      //This might happen, when the wrong password is in, the user isn't found, or if the user hasn't logged in recently.
+    });
+  }
+}
+
+void getCurrentUsersDataFromFirestore() {
+  FirebaseFirestore.instance
+      .collection("users")
+      .doc(currentUsersUID)
+      .get()
+      .then((DocumentSnapshot documentSnapshot) {
+    if (documentSnapshot.exists) {
+      log('Document exists on the database');
+      currentUserProfile = UserProfile(
+          currentUsersUID,
+          documentSnapshot.get("email"),
+          documentSnapshot.get("password"),
+          documentSnapshot.get("birthday"),
+          documentSnapshot.get("address"),
+          documentSnapshot.get("postalCode"),
+          documentSnapshot.get("city"));
+      //print(currentUser.toString());
+    }
+  });
+}
+/****/
+
+/*Build Navigation*/
+Widget buttonNavigation(int index, BuildContext context) {
+  return BottomNavigationBar(
+      items: const <BottomNavigationBarItem>[
+        BottomNavigationBarItem(
+          icon: Icon(Icons.attach_money),
+          label: 'Acheter',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.shopping_bag),
+          label: 'Panier',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person),
+          label: 'Profil',
+        ),
+      ],
+      currentIndex: index,
+      onTap: (value) {
+        if (value == 0 && index != 0) {
+          goToClothListPage(context);
+        }
+        if (value == 1 && index != 1) {
+          goToShoppingCartPage(context);
+        }
+        if (value == 2 && index != 2) {
+          goToUserProfilPage(context);
+        }
+      });
+}
+/**/
+
+/*Cart function*/
+void addItemToCart(Cloth c) {
+  FirebaseFirestore.instance
+      .collection("users/" + currentUsersUID + "/cart")
+      .add({
+    'title': c.title,
+    'size': c.size,
+    'price': c.price,
+    'imageSrc': c.imageSrc,
+    'category': c.category,
+    'brand': c.brand,
+    'resizeImage': c.resizeImage
+  });
+}
+/**/
+
+/**Other functions**/
+void _selectDate(BuildContext context, TextEditingController t) async {
   final DateTime? selectedDate = await showDatePicker(
     confirmText: 'Modifier',
     context: context,
@@ -1222,3 +1164,77 @@ Future<void> logout(BuildContext c) async {
   //FlutterRestart.restartApp();
   goToLoginPage(c);
 }
+
+void selectCloth(Cloth c) {
+  selectedCloth = c;
+}
+/****/
+
+//********//
+
+//****Classes****//
+class Cloth {
+  String id = "";
+  String title;
+  String size;
+  double price;
+  String imageSrc;
+  String category; //Chemise, T-Shirt, Chaussure, Pantalon, ...
+  String brand;
+  bool resizeImage;
+
+  Cloth(this.title, this.size, this.price, this.imageSrc, this.category,
+      this.brand, this.resizeImage) {
+    /*log(this.toString());*/
+  }
+  @override
+  String toString() {
+    return "title: " +
+        this.title +
+        " - size; " +
+        this.size +
+        " - price: " +
+        this.price.toString() +
+        " - imageSrc: " +
+        this.imageSrc +
+        " - category: " +
+        this.category +
+        " - brand: " +
+        this.brand +
+        " resizeImage: " +
+        this.resizeImage.toString();
+  }
+}
+
+class UserProfile {
+  String uid;
+  String email;
+  String password;
+  String birthday;
+  String address;
+  String postalCode;
+  String city;
+
+  UserProfile(this.uid, this.email, this.password, this.birthday, this.address,
+      this.postalCode, this.city);
+
+  @override
+  String toString() {
+    // TODO: implement toString
+    return "uid: " +
+        uid +
+        "email: " +
+        email +
+        "\npassword: " +
+        password +
+        "\nbirthday: " +
+        birthday +
+        "\naddress: " +
+        address +
+        "\npostalCode: " +
+        postalCode +
+        "\ncity: " +
+        city;
+  }
+}
+//********//
