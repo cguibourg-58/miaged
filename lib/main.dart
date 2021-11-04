@@ -902,8 +902,12 @@ class _UserProfilPageState extends State<UserProfilPage> {
                                 changePasswordForm(context),
                             actions: <Widget>[
                               TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(context, 'Cancel'),
+                                onPressed: () {
+                                  Navigator.pop(context, 'Cancel');
+                                  _currentPassword.text = "";
+                                  _newPassword.text = "";
+                                  _newPasswordVerification.text = "";
+                                },
                                 child: const Text('Annuler'),
                               ),
                               TextButton(
@@ -924,11 +928,20 @@ class _UserProfilPageState extends State<UserProfilPage> {
                                           context: context,
                                           builder: (BuildContext context) =>
                                               AlertDialog(
-                                                  title: Text("Erreur"),
-                                                  content: Text(
-                                                      changePasswordErrorMessage,
-                                                      style: TextStyle(
-                                                          color: Colors.red))))
+                                                title: Text("Erreur"),
+                                                content: Text(
+                                                    changePasswordErrorMessage,
+                                                    style: TextStyle(
+                                                        color: Colors.red)),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.pop(
+                                                            context, 'OK'),
+                                                    child: const Text('OK'),
+                                                  ),
+                                                ],
+                                              ))
                                     }
                                 },
                                 child: const Text('Modifier'),
@@ -972,38 +985,77 @@ class _UserProfilPageState extends State<UserProfilPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(70, 16, 70, 0),
             child: ElevatedButton(
+              style: ButtonStyle(
+                backgroundColor: MaterialStateProperty.all<Color>(Colors.grey),
+              ),
+              onPressed: () {
+                _password.text = currentUserProfile.password;
+                _birthday.text = currentUserProfile.birthday;
+                _address.text = currentUserProfile.address;
+                _postalCode.text = currentUserProfile.postalCode;
+                _city.text = currentUserProfile.city;
+                _currentPassword.text = "";
+                _newPassword.text = "";
+                _newPasswordVerification.text = "";
+              },
+              child: const Text('Réinitializer les champs'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(70, 16, 70, 0),
+            child: ElevatedButton(
               child: const Text('Valider'),
               style: ButtonStyle(
                 backgroundColor: MaterialStateProperty.all<Color>(Colors.red),
               ),
               onPressed: () {
                 //() => print("watt ze phoque!?");
-                showDialog<String>(
-                  context: context,
-                  builder: (BuildContext context) => AlertDialog(
-                    content: const Text(
-                        'Voulez-vous vraiment modifier vos données ?'),
-                    actions: <Widget>[
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, 'Cancel'),
-                        child: const Text('Non'),
-                      ),
-                      TextButton(
-                        onPressed: () => {
-                          Navigator.pop(context, 'OK'),
-                          updateUsersData(
-                              _password.text,
-                              _birthday.text,
-                              _address.text,
-                              _postalCode.text,
-                              _city.text,
-                              changePassword)
-                        },
-                        child: const Text('Oui'),
-                      ),
-                    ],
-                  ),
-                );
+
+                if (_password.text == currentUserProfile.password &&
+                    _birthday.text == currentUserProfile.birthday &&
+                    _address.text == currentUserProfile.address &&
+                    _postalCode.text == currentUserProfile.postalCode &&
+                    _city.text == currentUserProfile.city) {
+                  showDialog(
+                      context: context,
+                      builder: (BuildContext context) => AlertDialog(
+                            content: const Text("Aucun champs n'a été modifié"),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(context, 'Cancel'),
+                                child: const Text('Retour'),
+                              ),
+                            ],
+                          ));
+                } else {
+                  showDialog<String>(
+                    context: context,
+                    builder: (BuildContext context) => AlertDialog(
+                      content: const Text(
+                          'Voulez-vous vraiment modifier vos données ?'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, 'Cancel'),
+                          child: const Text('Non'),
+                        ),
+                        TextButton(
+                          onPressed: () => {
+                            Navigator.pop(context, 'OK'),
+                            updateUsersData(
+                                _password.text,
+                                _birthday.text,
+                                _address.text,
+                                _postalCode.text,
+                                _city.text,
+                                changePassword)
+                          },
+                          child: const Text('Oui'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
               },
             ),
           ),
@@ -1052,19 +1104,30 @@ class _UserProfilPageState extends State<UserProfilPage> {
   bool changePassword = false;
 
   void checkNewPassword() {
-    changePassword = _password.text == _currentPassword.text &&
-        _newPassword.text == _newPasswordVerification.text;
-    if (_currentPassword.text == "") {
+    if (!isPasswordCompliant(_newPassword.text)) {
       changePasswordErrorMessage =
-          "Veuillez remplir les trois champs de saisie.";
-    } else if (_password.text != _currentPassword.text) {
-      changePasswordErrorMessage = "Mot de passe incorrect.";
-    } else if (_newPassword.text != _newPasswordVerification.text) {
-      changePasswordErrorMessage =
-          "Vérifiez le texte de votre nouveau mot de passe.";
-    } else if (changePassword) {
-      log("c'est good !");
-      _password.text = _newPassword.text;
+          "Le format du mot de passe est incorrect. Il doit comporter au moins, un chiffre, " +
+              "une majuscule et une minuscule, le tout sur au moins 6 caractères.";
+      changePassword = false;
+    }
+    if (isPasswordCompliant(_newPassword.text)) {
+      changePassword = _password.text == _currentPassword.text &&
+          _newPassword.text == _newPasswordVerification.text;
+      if (_currentPassword.text == "") {
+        changePasswordErrorMessage =
+            "Veuillez remplir les trois champs de saisie.";
+      } else if (_password.text != _currentPassword.text) {
+        changePasswordErrorMessage = "Mot de passe incorrect.";
+      } else if (_newPassword.text != _newPasswordVerification.text) {
+        changePasswordErrorMessage =
+            "Vérifiez le texte de votre nouveau mot de passe.";
+      } else if (changePassword) {
+        log("c'est good !");
+        _password.text = _newPassword.text;
+        _currentPassword.text = "";
+        _newPassword.text = "";
+        _newPasswordVerification.text = "";
+      }
     }
   }
 
@@ -1139,6 +1202,15 @@ _selectDate(BuildContext context, TextEditingController t) async {
         "/" +
         selectedDate.year.toString();
   }
+}
+
+bool isPasswordCompliant(String password) {
+  if (password.length < 6) return false;
+  if (!password.contains(RegExp(r"[a-z]"))) return false;
+  if (!password.contains(RegExp(r"[A-Z]"))) return false;
+  if (!password.contains(RegExp(r"[0-9]"))) return false;
+  //if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) return false;
+  return true;
 }
 
 Future<void> logout(BuildContext c) async {
