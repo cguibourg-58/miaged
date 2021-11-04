@@ -26,6 +26,9 @@ List _cartCloth = <Cloth>[];
 UserProfile currentUserProfile = UserProfile("", "", "", "", "", "", "");
 bool logged = false;
 User? currentUser;
+bool IsANewUser = false;
+String currentEmail = "";
+String currentPassword = "";
 //********//
 
 void main() {
@@ -74,6 +77,9 @@ class _LoginPageState extends State<LoginPage> {
   //FirebaseAuth auth = FirebaseAuth.instance;
   TextEditingController _textLogin = TextEditingController();
   TextEditingController _textPassword = TextEditingController();
+  TextEditingController _newUsersLogin = TextEditingController();
+  TextEditingController _newUsersPassword = TextEditingController();
+  TextEditingController _newUsersPasswordVerification = TextEditingController();
 
   @override
   void initState() {
@@ -102,20 +108,146 @@ class _LoginPageState extends State<LoginPage> {
             controller: _textPassword,
             obscureText: true,
             decoration: InputDecoration(
-                border: OutlineInputBorder(), labelText: "Password"),
+                border: OutlineInputBorder(), labelText: "Mot de passe"),
           ),
         ),
-        ElevatedButton(
-          style: ButtonStyle(
-            backgroundColor: MaterialStateProperty.all<Color>(Colors.blueGrey),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 0, 15, 0),
+                child: ElevatedButton(
+                  style: ButtonStyle(
+                    backgroundColor:
+                        MaterialStateProperty.all<Color>(Colors.blueGrey),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                        context: context,
+                        builder: (BuildContext context) => AlertDialog(
+                              title: Text("Inscription"),
+                              insetPadding: EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 15),
+                              content: Column(children: [
+                                Text(
+                                    "Veuillez renseigner votre email et votre mot de passe."),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(8, 16, 8, 8),
+                                  child: TextFormField(
+                                    controller: _newUsersLogin,
+                                    decoration: InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        labelText: "Login"),
+                                  ),
+                                ),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                                  child: TextFormField(
+                                    controller: _newUsersPassword,
+                                    obscureText: true,
+                                    decoration: InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        labelText: "Mot de passe"),
+                                  ),
+                                ),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                                  child: TextFormField(
+                                    controller: _newUsersPasswordVerification,
+                                    obscureText: true,
+                                    decoration: InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        labelText:
+                                            "Confirmer votre mot de passe"),
+                                  ),
+                                ),
+                              ]),
+                              actions: [
+                                TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context, 'Cancel');
+                                      _newUsersLogin.text = "";
+                                      _newUsersPassword.text = "";
+                                      _newUsersPasswordVerification.text = "";
+                                    },
+                                    child: Text("Annuler")),
+                                ElevatedButton(
+                                    onPressed: () {
+                                      checkNewPassword();
+                                      if (checkNewPassword()) {
+                                        createNewUser();
+                                        Navigator.pop(context, 'OK');
+                                        _newUsersLogin.text = "";
+                                        _newUsersPassword.text = "";
+                                        _newUsersPasswordVerification.text = "";
+                                      } else {
+                                        showDialog(
+                                            context: context,
+                                            builder: (BuildContext context) =>
+                                                AlertDialog(
+                                                  title: Text("Erreur"),
+                                                  content: Text(errorMessage,
+                                                      style: TextStyle(
+                                                          color: Colors.red)),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                              context, 'OK'),
+                                                      child: const Text('OK'),
+                                                    ),
+                                                  ],
+                                                ));
+                                      }
+                                    },
+                                    child: Text("Créer le compte")),
+                              ],
+                            ));
+                  },
+                  child: const Text('Créer un compte'),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  connect();
+                },
+                child: const Text('Se connecter'),
+              ),
+            ],
           ),
-          onPressed: () {
-            connect();
-          },
-          child: const Text('Se connecter'),
         ),
       ],
     ));
+  }
+
+  String errorMessage = "";
+
+  bool checkNewPassword() {
+    if (!isEmail(_newUsersPassword.text)) {
+      errorMessage = "Le format de l'email est incorrect.";
+      return false;
+    }
+    if (!isPasswordCompliant(_newUsersPassword.text)) {
+      errorMessage =
+          "Le format du mot de passe est incorrect. Il doit comporter au moins, un chiffre, " +
+              "une majuscule et une minuscule, le tout sur au moins 6 caractères.";
+      return false;
+    }
+    if (_newUsersPassword.text == "" ||
+        _newUsersPasswordVerification == "" ||
+        _newUsersLogin == "") {
+      errorMessage = "Veuillez remplir les trois champs de saisie.";
+      return false;
+    } else if (_newUsersPassword.text != _newUsersPasswordVerification.text) {
+      errorMessage = "Vérifiez le texte de votre nouveau mot de passe.";
+      return false;
+    }
+    return true;
   }
 
   Future<void> connect() async {
@@ -126,6 +258,22 @@ class _LoginPageState extends State<LoginPage> {
       log("bien joué!");
       //goToClothListPage(context);
     }*/
+  }
+
+  void createNewUser() async {
+    try {
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+              email: _newUsersLogin.text, password: _newUsersPassword.text);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'weak-password') {
+        print('The password provided is too weak.');
+      } else if (e.code == 'email-already-in-use') {
+        print('The account already exists for that email.');
+      }
+    } catch (e) {
+      print(e);
+    }
   }
 
   void verifyEmail() async {
@@ -149,8 +297,12 @@ class _LoginPageState extends State<LoginPage> {
       log("uid: " + currentUsersUID);
       loggedIn = true;
       _cloth.clear();
+      //checkNewUser();
       goToClothListPage(context);
+      //addUserInformationToFirestore();
       getCurrentUsersDataFromFirestore();
+      currentEmail = email;
+      currentPassword = password;
       //log("nice tu es connecté");
     } /*on FirebaseAuthException */ catch (e) {
       log('Failed with error code: ${e}');
@@ -172,14 +324,6 @@ class _ClothListPageState extends State<ClothListPage> {
         _cloth.clear();
       }
       querySnapshot.docs.forEach((result) {
-        /*print(result);
-        log(result.get("title"));
-        log(result.get("size"));
-        log(result.get("price").toString());
-        log(result.get("imageSrc"));
-        log(result.get("category"));
-        log(result.get("brand"));
-        log(result.get("resizeImage").toString());*/
         _cloth.add(Cloth(
             result.get("title").toString(),
             result.get("size").toString(),
@@ -505,8 +649,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Future<bool> initClothList() async {
-    //if (_cartCloth.length > 0) {
-    //}
     await firestoreInstance
         .collection("users/" + currentUsersUID + "/cart")
         .get()
@@ -514,17 +656,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       _cartCloth.clear();
       nombreDArticle = 0;
       total = 0;
-      //log("----");
       querySnapshot.docs.forEach((result) {
         print("doc's id: " + result.id.toString());
-        /*print(result);
-        log(result.get("title"));
-        log(result.get("size"));
-        log(result.get("price").toString());
-        log(result.get("imageSrc"));
-        log(result.get("category"));
-        log(result.get("brand"));
-        log(result.get("resizeImage").toString());*/
         Cloth c = Cloth(
             result.get("title").toString(),
             result.get("size").toString(),
@@ -538,7 +671,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         total += result.get("price") * 1.0;
         nombreDArticle++;
       });
-      //log(_cartCloth.toString());
     });
     return true;
   }
@@ -669,7 +801,7 @@ class UserProfilPage extends StatefulWidget {
 
 class _UserProfilPageState extends State<UserProfilPage> {
   TextEditingController _password =
-      TextEditingController(text: currentUserProfile.password);
+      TextEditingController(text: currentPassword);
   TextEditingController _birthday =
       TextEditingController(text: currentUserProfile.birthday);
   TextEditingController _address =
@@ -692,7 +824,7 @@ class _UserProfilPageState extends State<UserProfilPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(30, 15, 30, 4),
             child: TextFormField(
-              initialValue: currentUserProfile.email,
+              initialValue: currentEmail,
               enabled: false,
               decoration: InputDecoration(labelText: "Login"),
             ),
@@ -722,7 +854,7 @@ class _UserProfilPageState extends State<UserProfilPage> {
                                 },
                                 child: const Text('Annuler'),
                               ),
-                              TextButton(
+                              ElevatedButton(
                                 onPressed: () => {
                                   //log(s),
                                   //changeColor = !changeColor,
@@ -851,16 +983,30 @@ class _UserProfilPageState extends State<UserProfilPage> {
                           onPressed: () => Navigator.pop(context, 'Cancel'),
                           child: const Text('Non'),
                         ),
-                        TextButton(
+                        ElevatedButton(
                           onPressed: () => {
                             Navigator.pop(context, 'OK'),
-                            updateUsersData(
-                                _password.text,
-                                _birthday.text,
-                                _address.text,
-                                _postalCode.text,
-                                _city.text,
-                                changePassword)
+                            if (currentUserProfile.email == "")
+                              {
+                                createUserDocument(
+                                    currentEmail,
+                                    _password.text,
+                                    _birthday.text,
+                                    _address.text,
+                                    _postalCode.text,
+                                    _city.text),
+                                currentUserProfile.email == currentEmail,
+                              }
+                            else
+                              {
+                                updateUsersData(
+                                    _password.text,
+                                    _birthday.text,
+                                    _address.text,
+                                    _postalCode.text,
+                                    _city.text,
+                                    changePassword)
+                              }
                           },
                           child: const Text('Oui'),
                         ),
@@ -888,10 +1034,24 @@ class _UserProfilPageState extends State<UserProfilPage> {
                         onPressed: () => Navigator.pop(context, 'Cancel'),
                         child: const Text('Non'),
                       ),
-                      TextButton(
+                      ElevatedButton(
                         onPressed: () => {
                           Navigator.pop(context, 'OK'),
-                          logout(context),
+                          if (currentUserProfile.email == "")
+                            {
+                              createUserDocument(
+                                  currentEmail,
+                                  _password.text,
+                                  _birthday.text,
+                                  _address.text,
+                                  _postalCode.text,
+                                  _city.text),
+                              logout(context),
+                            }
+                          else
+                            {
+                              logout(context),
+                            }
                         },
                         child: const Text('Oui'),
                       ),
@@ -1032,23 +1192,16 @@ void goToUserProfilPage(BuildContext c) {
 /****/
 
 /**Handle User's data functions**/
-void updateUsersData(String password, String birthday, String address,
-    String postalCode, String city, bool passwordChanged) {
-  FirebaseFirestore.instance.collection("users").doc(currentUsersUID).update({
+void createUserDocument(String email, String password, String birthday,
+    String address, String postalCode, String city) {
+  FirebaseFirestore.instance.collection("users").doc(currentUsersUID).set({
+    'email': email,
     'password': password,
     'birthday': birthday,
     'address': address,
     'postalCode': postalCode,
-    'city': city
+    'city': city,
   });
-  if (passwordChanged) {
-    currentUser!.updatePassword(password).then((_) {
-      log("Successfully changed password");
-    }).catchError((error) {
-      log("Password can't be changed" + error.toString());
-      //This might happen, when the wrong password is in, the user isn't found, or if the user hasn't logged in recently.
-    });
-  }
 }
 
 void getCurrentUsersDataFromFirestore() {
@@ -1070,6 +1223,43 @@ void getCurrentUsersDataFromFirestore() {
       //print(currentUser.toString());
     }
   });
+}
+
+Future<void> checkNewUser() async {
+  await firestoreInstance
+      .collection("users")
+      .doc(currentUsersUID)
+      .get()
+      .then((docSnapshot) => {
+            if (docSnapshot.get("email") == "")
+              {
+                FirebaseFirestore.instance
+                    .collection("users")
+                    .doc(currentUsersUID)
+                    .update({
+                  'email': "walalou",
+                })
+              }
+          });
+}
+
+void updateUsersData(String password, String birthday, String address,
+    String postalCode, String city, bool passwordChanged) {
+  FirebaseFirestore.instance.collection("users").doc(currentUsersUID).update({
+    'password': password,
+    'birthday': birthday,
+    'address': address,
+    'postalCode': postalCode,
+    'city': city
+  });
+  if (passwordChanged) {
+    currentUser!.updatePassword(password).then((_) {
+      log("Successfully changed password");
+    }).catchError((error) {
+      log("Password can't be changed" + error.toString());
+      //This might happen, when the wrong password is in, the user isn't found, or if the user hasn't logged in recently.
+    });
+  }
 }
 /****/
 
@@ -1144,6 +1334,17 @@ void _selectDate(BuildContext context, TextEditingController t) async {
         "/" +
         selectedDate.year.toString();
   }
+}
+
+bool isEmail(String email) {
+  //String email = "tuveuxdupainpigeon@gmail.com";
+  if (email.contains(RegExp(
+      r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+"))) {
+    log("c'est un bon email");
+    return true;
+  }
+  log("tatata, c'est pas bon mon gars");
+  return false;
 }
 
 bool isPasswordCompliant(String password) {
