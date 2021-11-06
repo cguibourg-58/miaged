@@ -228,7 +228,7 @@ class _LoginPageState extends State<LoginPage> {
   String errorMessage = "";
 
   bool checkNewPassword() {
-    if (!isEmail(_newUsersPassword.text)) {
+    if (!isEmail(_newUsersLogin.text)) {
       errorMessage = "Le format de l'email est incorrect.";
       return false;
     }
