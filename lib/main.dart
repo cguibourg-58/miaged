@@ -441,6 +441,15 @@ class _ClothListPageState extends State<ClothListPage> {
           //log(i.toString());
         }
       }
+      if (cat == "Bas") {
+        if (element.category == "Pantalons" ||
+            element.category == "Shorts" ||
+            element.category == "Jupes") {
+          cards.add(buildItemCard(element));
+          i++;
+          //log(i.toString());
+        }
+      }
     });
 
     return GridView.count(
@@ -471,7 +480,7 @@ class _ClothListPageState extends State<ClothListPage> {
                             text: "Tous",
                           ),
                           Tab(text: "Hauts"),
-                          Tab(text: "Pantalons"),
+                          Tab(text: "Bas"),
                           Tab(text: "Chauss."),
                         ],
                       ),
@@ -489,7 +498,7 @@ class _ClothListPageState extends State<ClothListPage> {
                           bottomNavigationBar: buttonNavigation(0, context),
                         ),
                         Scaffold(
-                          body: buildShortedItem("Pantalons"),
+                          body: buildShortedItem("Bas"),
                           bottomNavigationBar: buttonNavigation(0, context),
                         ),
                         Scaffold(
