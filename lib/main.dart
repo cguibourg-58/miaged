@@ -361,7 +361,7 @@ class _ClothListPageState extends State<ClothListPage> {
                       '\nTaille : ' +
                       c.size +
                       '\n' +
-                      c.price.toStringAsFixed(2) +
+                      updatePriceFormat(c.price) +
                       ' €',
                   textAlign: TextAlign.center,
                 ),
@@ -390,7 +390,7 @@ class _ClothListPageState extends State<ClothListPage> {
                     '\nTaille : ' +
                     c.size +
                     '\n' +
-                    c.price.toStringAsFixed(2) +
+                    updatePriceFormat(c.price) +
                     ' €',
                 textAlign: TextAlign.center,
               ),
@@ -553,7 +553,7 @@ class _ClothDetailsPageState extends State<ClothDetailsPage> {
             Container(
               alignment: Alignment.topCenter,
               child: Text(
-                "À partir de " + selectedCloth.price.toStringAsFixed(2) + " €",
+                "À partir de " + updatePriceFormat(selectedCloth.price) + " €",
                 style: TextStyle(height: 2, fontSize: 25),
               ),
             ),
@@ -1358,6 +1358,11 @@ Future<void> logout(BuildContext c) async {
 
 void selectCloth(Cloth c) {
   selectedCloth = c;
+}
+
+String updatePriceFormat(double price) {
+  String str = price.toStringAsFixed(2).replaceAll(".", ",");
+  return str;
 }
 /****/
 
