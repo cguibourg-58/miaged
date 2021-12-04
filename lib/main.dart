@@ -129,7 +129,7 @@ class _LoginPageState extends State<LoginPage> {
                         builder: (BuildContext context) => AlertDialog(
                               title: Text("Inscription"),
                               insetPadding: EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 15),
+                                  horizontal: 20, vertical: 10),
                               content: Column(children: [
                                 Text(
                                     "Veuillez renseigner votre email et votre mot de passe."),
@@ -228,36 +228,34 @@ class _LoginPageState extends State<LoginPage> {
   String errorMessage = "";
 
   bool checkNewPassword() {
-    if (!isEmail(_newUsersLogin.text)) { 
-      errorMessage = "Le format de l'email est incorrect.";
-      return false;
-    }
-    if (!isPasswordCompliant(_newUsersPassword.text)) {
-      errorMessage =
-          "Le format du mot de passe est incorrect. Il doit comporter au moins, un chiffre, " +
-              "une majuscule et une minuscule, le tout sur au moins 6 caractères.";
-      return false;
-    }
     if (_newUsersPassword.text == "" ||
         _newUsersPasswordVerification == "" ||
         _newUsersLogin == "") {
       errorMessage = "Veuillez remplir les trois champs de saisie.";
       return false;
-    } else if (_newUsersPassword.text != _newUsersPasswordVerification.text) {
-      errorMessage = "Vérifiez le texte de votre nouveau mot de passe.";
-      return false;
+    } else {
+      if (!isEmail(_newUsersLogin.text)) {
+        errorMessage = "Le format de l'email est incorrect.";
+        return false;
+      }
+      if (!isPasswordCompliant(_newUsersPassword.text)) {
+        errorMessage =
+            "Le format du mot de passe est incorrect. Il doit comporter au moins, un chiffre, " +
+                "une majuscule et une minuscule, le tout sur au moins 6 caractères.";
+        return false;
+      }
+      if (_newUsersPassword.text != _newUsersPasswordVerification.text) {
+        errorMessage = "Vérifiez le texte de votre nouveau mot de passe.";
+        return false;
+      }
+      return true;
     }
-    return true;
   }
 
   Future<void> connect() async {
     log("tu as touché sur le bouton");
     log("login: " + _textLogin.text);
     verifyEmail();
-    /*if (loggedIn) {
-      log("bien joué!");
-      //goToClothListPage(context);
-    }*/
   }
 
   void createNewUser() async {
@@ -284,7 +282,7 @@ class _LoginPageState extends State<LoginPage> {
     //log("email: " + email + " - password: " + password);
     void Function(FirebaseAuthException e) errorCallback;
     try {
-      log("tu es dans la sauce");
+      log("try to login...");
       /*var methods = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);*/
       UserCredential userCredential = await FirebaseAuth.instance
@@ -303,11 +301,13 @@ class _LoginPageState extends State<LoginPage> {
       getCurrentUsersDataFromFirestore();
       currentEmail = email;
       currentPassword = password;
+      _textLogin.text = "";
+      _textPassword.text = "";
       //log("nice tu es connecté");
     } /*on FirebaseAuthException */ catch (e) {
       log('Failed with error code: ${e}');
       loggedIn = false;
-      log("dsl tu n'as pas mis le bon email et/ou le bon mot de passe");
+      log("error: bad password or login");
     }
   }
 }
@@ -318,6 +318,8 @@ class ClothListPage extends StatefulWidget {
 }
 
 class _ClothListPageState extends State<ClothListPage> {
+  var user = FirebaseAuth.instance.currentUser;
+
   Future<bool> initClothList() async {
     await firestoreInstance.collection("cloths").get().then((querySnapshot) {
       if (_cloth.length > 0) {
@@ -454,11 +456,9 @@ class _ClothListPageState extends State<ClothListPage> {
   @override
   Widget build(BuildContext context) => FutureBuilder(
         future: initClothList(),
-        //future: dataInitialized,
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             Widget clothList;
-            //initClothList();
             clothList = buildAllItem();
             log("ClothListPage");
             return DefaultTabController(
@@ -500,7 +500,6 @@ class _ClothListPageState extends State<ClothListPage> {
                     )));
           } else {
             Widget clothList;
-            //initClothList();
             clothList = buildAllItem();
             log("ClothListPage");
             return Scaffold(
@@ -587,29 +586,27 @@ class _ClothDetailsPageState extends State<ClothDetailsPage> {
                     backgroundColor:
                         MaterialStateProperty.all<Color>(Colors.orangeAccent),
                   ),
-                  onPressed: //() => addItemToCart(selectedCloth),
-                      () => showDialog<String>(
-                            context: context,
-                            builder: (BuildContext context) => AlertDialog(
-                              title: const Text('Ajouter au panier'),
-                              content: const Text(
-                                  'Souhaitez-vous ajouter cet article à votre panier ?'),
-                              actions: <Widget>[
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, 'Cancel'),
-                                  child: const Text('Non'),
-                                ),
-                                TextButton(
-                                  onPressed: () => {
-                                    Navigator.pop(context, 'OK'),
-                                    addItemToCart(selectedCloth)
-                                  },
-                                  child: const Text('Oui'),
-                                ),
-                              ],
+                  onPressed: () => showDialog<String>(
+                        context: context,
+                        builder: (BuildContext context) => AlertDialog(
+                          title: const Text('Ajouter au panier'),
+                          content: const Text(
+                              'Souhaitez-vous ajouter cet article à votre panier ?'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, 'Cancel'),
+                              child: const Text('Non'),
                             ),
-                          ),
+                            TextButton(
+                              onPressed: () => {
+                                Navigator.pop(context, 'OK'),
+                                addItemToCart(selectedCloth)
+                              },
+                              child: const Text('Oui'),
+                            ),
+                          ],
+                        ),
+                      ),
                   child: RichText(
                     text: TextSpan(
                       children: [
@@ -648,6 +645,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     setState(() {});
   }
 
+  var user = FirebaseAuth.instance.currentUser;
   Future<bool> initClothList() async {
     await firestoreInstance
         .collection("users/" + currentUsersUID + "/cart")
@@ -694,8 +692,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           width: 60,
         ),
         trailing: IconButton(
-            icon: Icon(Icons.highlight_off),
-            onPressed: () => /*print("remove it pleeeeease!")*/ removeItem(c)),
+            icon: Icon(Icons.highlight_off), onPressed: () => removeItem(c)),
         onTap: () => {selectCloth(c), goToClothDetailedPage(context)},
       ),
       decoration: BoxDecoration(
@@ -722,8 +719,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     return Container(
       child: ListTile(
         title: Text("Votre panier",
-            style: TextStyle(/*fontWeight: FontWeight.bold, */ fontSize: 28),
-            textAlign: TextAlign.center),
+            style: TextStyle(fontSize: 28), textAlign: TextAlign.center),
       ),
       decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: Colors.black26))),
@@ -756,11 +752,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   @override
   Widget build(BuildContext context) => FutureBuilder(
         future: initClothList(),
-        //future: dataInitialized,
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             Widget clothList;
-            //initClothList();
             clothList = buildAllItem();
             log("ShoppingCartPage");
             return DefaultTabController(
@@ -775,7 +769,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                 ));
           } else {
             Widget clothList;
-            //initClothList();
             clothList = buildAllItem();
             log("ShoppingCartPage");
             return Scaffold(
@@ -1076,29 +1069,32 @@ class _UserProfilPageState extends State<UserProfilPage> {
   bool changePassword = false;
 
   void checkNewPassword() {
-    if (!isPasswordCompliant(_newPassword.text)) {
+    if (_newPassword.text == "" ||
+        _newPasswordVerification.text == "" ||
+        _currentPassword.text == "") {
       changePasswordErrorMessage =
-          "Le format du mot de passe est incorrect. Il doit comporter au moins, un chiffre, " +
-              "une majuscule et une minuscule, le tout sur au moins 6 caractères.";
-      changePassword = false;
-    }
-    if (isPasswordCompliant(_newPassword.text)) {
-      changePassword = _password.text == _currentPassword.text &&
-          _newPassword.text == _newPasswordVerification.text;
-      if (_currentPassword.text == "") {
+          "Veuillez remplir les trois champs de saisi.";
+    } else if (_password.text != _currentPassword.text) {
+      changePasswordErrorMessage = "Mot de passe incorrect.";
+    } else {
+      if (isPasswordCompliant(_newPassword.text)) {
+        changePassword = _password.text == _currentPassword.text &&
+            _newPassword.text == _newPasswordVerification.text;
+        if (_newPassword.text != _newPasswordVerification.text) {
+          changePasswordErrorMessage =
+              "Veuillez vérifiez le texte de votre nouveau mot de passe.";
+        } else if (changePassword) {
+          log("OK!");
+          _password.text = _newPassword.text;
+          _currentPassword.text = "";
+          _newPassword.text = "";
+          _newPasswordVerification.text = "";
+        }
+      } else if (!isPasswordCompliant(_newPassword.text)) {
         changePasswordErrorMessage =
-            "Veuillez remplir les trois champs de saisie.";
-      } else if (_password.text != _currentPassword.text) {
-        changePasswordErrorMessage = "Mot de passe incorrect.";
-      } else if (_newPassword.text != _newPasswordVerification.text) {
-        changePasswordErrorMessage =
-            "Vérifiez le texte de votre nouveau mot de passe.";
-      } else if (changePassword) {
-        log("c'est good !");
-        _password.text = _newPassword.text;
-        _currentPassword.text = "";
-        _newPassword.text = "";
-        _newPasswordVerification.text = "";
+            "Le format du nouveau mot de passe est incorrect. Il doit comporter au moins, un chiffre, " +
+                "une majuscule et une minuscule, le tout sur au moins 6 caractères.";
+        changePassword = false;
       }
     }
   }
@@ -1154,10 +1150,6 @@ class _UserProfilPageState extends State<UserProfilPage> {
 
 /**Navigation functions**/
 void goToLoginPage(BuildContext c) {
-  /*Navigator.push(
-    c,
-    MaterialPageRoute(builder: (context) => MyApp()),
-  );*/
   Navigator.pushAndRemoveUntil(
       c, MaterialPageRoute(builder: (context) => MyApp()), (route) => false);
 }
@@ -1324,7 +1316,7 @@ void _selectDate(BuildContext context, TextEditingController t) async {
     lastDate: DateTime(
         DateTime.now().year - 18, DateTime.now().month, DateTime.now().day),
     initialDatePickerMode: DatePickerMode.year,
-    helpText: "Date d'anniversaire", // Can be used as title
+    helpText: "Date d'anniversaire",
     cancelText: 'Annuler',
   );
   if (selectedDate != null) {
@@ -1340,10 +1332,10 @@ bool isEmail(String email) {
   //String email = "tuveuxdupainpigeon@gmail.com";
   if (email.contains(RegExp(
       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+"))) {
-    log("c'est un bon email");
+    log("le format de l'email est correct");
     return true;
   }
-  log("tatata, c'est pas bon mon gars");
+  log("le format de l'email est incorrect");
   return false;
 }
 
@@ -1352,7 +1344,6 @@ bool isPasswordCompliant(String password) {
   if (!password.contains(RegExp(r"[a-z]"))) return false;
   if (!password.contains(RegExp(r"[A-Z]"))) return false;
   if (!password.contains(RegExp(r"[0-9]"))) return false;
-  //if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) return false;
   return true;
 }
 
@@ -1362,7 +1353,6 @@ Future<void> logout(BuildContext c) async {
   _cloth = [];
   currentUsersUID = "";
   currentUserProfile = UserProfile("", "", "", "", "", "", "");
-  //FlutterRestart.restartApp();
   goToLoginPage(c);
 }
 
@@ -1421,7 +1411,6 @@ class UserProfile {
 
   @override
   String toString() {
-    // TODO: implement toString
     return "uid: " +
         uid +
         "email: " +
