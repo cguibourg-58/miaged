@@ -691,7 +691,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             " \n" +
             c.brand +
             "\n" +
-            c.price.toStringAsFixed(2) +
+            updatePriceFormat(c.price) /*.toStringAsFixed(2)*/ +
             " € "),
         isThreeLine: true,
         leading: Image(
@@ -716,7 +716,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         "\nNombre d'articles : " +
             nombreDArticle.toString() +
             "\nTotal : " +
-            total.toStringAsFixed(2) +
+            updatePriceFormat(total) /*.toStringAsFixed(2)*/ +
             " €",
         style: TextStyle(fontSize: 20),
         textAlign: TextAlign.center,
